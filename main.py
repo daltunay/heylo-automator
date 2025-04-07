@@ -61,7 +61,6 @@ class HeyloAutomator:
 
     def find_event(self, title: str) -> str | None:
         """Find the event card by its title and return its ID"""
-        print(f"Searching for event: {title}")
         soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
         upcoming_header = soup.find(
