@@ -1,0 +1,11 @@
+[project]
+name = "heylo-automator"
+version = "0.1.0"
+description = "Heylo Automator"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.13.3",
+    "selenium>=4.31.0",
+    "webdriver-manager>=4.0.2",
+]
