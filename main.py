@@ -12,16 +12,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Constants
-USERNAME = "daniel"
 BASE_URL = "https://www.heylo.com"
 LOGIN_URL = f"{BASE_URL}/login"
 EVENTS_URL = f"{BASE_URL}/events/85c6b042-62cd-47f3-a439-1dd9417f4246"
+USERNAME = "daniel"
 CHROME_USER_DATA_DIR = f"/Users/{USERNAME}/Library/Application Support/Google/Chrome/"
 CHROME_PROFILE = "Default"
 
 EVENT_TITLES = {
     "montmartre": "Thursday - Montmartre Stairs Challenge",
     "bootcamp": "Tuesday Bootcamp Run",
+    "test": "DUMMY",
 }
 
 
@@ -46,46 +47,58 @@ def wait_for_login(driver: WebDriver) -> None:
 
 
 def register_for_event(driver: WebDriver, event_url: str) -> None:
-    driver.get(event_url)
-    try:
-        # Click the register button
-        register_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//div[contains(text(), \"S'inscrire\") or contains(text(), 'Register')]",
-                )
+    while True:
+        try:
+            driver.get(event_url)
+            _perform_registration_clicks(driver)
+            print("Successfully registered for the event!")
+            print("Keeping window open. Press Ctrl+C to exit...")
+            break
+        except TimeoutException:
+            print("Registration button not found or not clickable")
+            print("Retrying in 5 seconds...")
+            time.sleep(5)
+        except Exception as e:
+            print(f"An error occurred: {str(e)}")
+            raise
+
+
+def _perform_registration_clicks(driver: WebDriver) -> None:
+    # Click the register button
+    register_button = WebDriverWait(driver, 5).until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//div[contains(text(), \"S'inscrire\") or contains(text(), 'Register')]",
             )
         )
-        register_button.click()
+    )
+    register_button.click()
+    print("Clicked register button")
 
-        # Click the continue button
-        continue_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//div[contains(text(), 'Continue') or contains(text(), 'Continuer')]",
-                )
+    # Click the continue button
+    continue_button = WebDriverWait(driver, 5).until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//div[contains(text(), 'Continue') or contains(text(), 'Continuer')]",
             )
         )
-        continue_button.click()
+    )
+    continue_button.click()
+    print("Clicked continue button")
 
-        # Click the skip button
-        skip_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable(
-                (
-                    By.XPATH,
-                    "//div[contains(text(), 'Skip') or contains(text(), 'Passer')]",
-                )
+    # Click the skip button
+    skip_button = WebDriverWait(driver, 5).until(
+        EC.element_to_be_clickable(
+            (
+                By.XPATH,
+                "//div[contains(text(), 'Skip') or contains(text(), 'Passer')]",
             )
         )
-        skip_button.click()
-
-        print("Successfully registered for the event!")
-        print("Keeping window open. Press Ctrl+C to exit...")
-    except TimeoutException:
-        print("Registration button not found or not clickable")
-        input("Press Enter to try registering again...")
+    )
+    skip_button.click()
+    print("Clicked skip button")
 
 
 def find_event(soup: BeautifulSoup, title: str) -> str | None:
