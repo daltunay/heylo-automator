@@ -1,4 +1,3 @@
-import argparse
 import time
 
 from bs4 import BeautifulSoup
@@ -144,11 +143,13 @@ def get_event(event_type: str) -> None:
 
 
 def main():
+    import argparse
+
     parser = argparse.ArgumentParser(description="Heylo event registration automation")
     parser.add_argument(
         "event_type",
         choices=list(EVENT_TITLES.keys()),
-        help="Type of event to register for",
+        help=f"Type of event to register for ({', '.join(EVENT_TITLES.keys())})",
     )
 
     args = parser.parse_args()
