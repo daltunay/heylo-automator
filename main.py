@@ -47,10 +47,10 @@ class HeyloAutomator:
             options=chrome_options,
         )
 
-    def login(self, timeout: int = 2) -> None:
+    def login(self, initial_wait: int = 2) -> None:
         """Log into Heylo"""
         self.driver.get(self.login_url)
-        time.sleep(timeout)
+        time.sleep(initial_wait)
         if self.login_url not in self.driver.current_url:
             print("Already logged in!")
             return
@@ -109,7 +109,7 @@ class HeyloAutomator:
     def _perform_registration_clicks(self) -> None:
         """Click the registration buttons"""
         print("Performing registration clicks...")
-        for text_pairs in [
+        for en_key, fr_key in [
             ("Register", "S'inscrire"),
             ("Continue", "Continuer"),
             ("Skip", "Passer"),
@@ -118,21 +118,24 @@ class HeyloAutomator:
                 EC.element_to_be_clickable(
                     (
                         By.XPATH,
-                        f"""//div[contains(text(), "{text_pairs[0]}") or contains(text(), "{text_pairs[1]}")]""",
+                        f"""//div[contains(text(), "{en_key}") or contains(text(), "{fr_key}")]""",
                     )
                 )
             )
             button.click()
-            print(f"Clicked '{text_pairs[0]}' button")
+            print(f"Clicked '{en_key}' button")
 
     def register(self, event_type: str) -> None:
         """Register for the specified event type"""
         print(f"Registering for event type: {event_type}")
-        print("Waiting for event to be published...")
         while True:
             try:
+                print("Checking for event publication...")
+                time.sleep(1)
+                print(".", end="", flush=True)
+                
                 self.driver.get(self.events_url)
-                WebDriverWait(self.driver, 2).until(
+                WebDriverWait(self.driver, 5).until(
                     EC.presence_of_element_located(
                         (By.CSS_SELECTOR, '[data-testid^="event-card--"]')
                     )
@@ -144,12 +147,8 @@ class HeyloAutomator:
                     input("Registration complete! Press Enter or Ctrl+C to exit...")
                     return
 
-                time.sleep(1)
-                print(".", end="", flush=True)
-
             except Exception as e:
                 print(f"\nAn error occurred: {str(e)}")
-                time.sleep(1)
 
 
 def main() -> None:
