@@ -10,150 +10,159 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Constants
-BASE_URL = "https://www.heylo.com"
-LOGIN_URL = f"{BASE_URL}/login"
-MIDNIGHT_RUNNERS_ID = "85c6b042-62cd-47f3-a439-1dd9417f4246"
-EVENTS_URL = f"{BASE_URL}/events/{MIDNIGHT_RUNNERS_ID}"
-USERNAME = "daniel"
-CHROME_USER_DATA_DIR = f"/Users/{USERNAME}/Library/Application Support/Google/Chrome/"
-CHROME_PROFILE = "Default"
 
-EVENT_TITLES = {
-    "montmartre": "Thursday - Montmartre Stairs Challenge",
-    "bootcamp": "Tuesday Bootcamp Run",
-    "test": "DUMMY",
-}
+class HeyloAutomator:
+    BASE_URL: str = "https://www.heylo.com"
+    MIDNIGHT_RUNNERS_ID: str = "85c6b042-62cd-47f3-a439-1dd9417f4246"
+    EVENT_TITLES: dict[str, str] = {
+        "montmartre": "Thursday - Montmartre Stairs Challenge",
+        "bootcamp": "Tuesday Bootcamp Run",
+    }
 
-
-def setup_driver() -> WebDriver:
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_argument(f"user-data-dir={CHROME_USER_DATA_DIR}")
-    chrome_options.add_argument(f"profile-directory={CHROME_PROFILE}")
-    return webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=chrome_options,
-    )
-
-
-def wait_for_login(driver: WebDriver) -> None:
-    time.sleep(2)  # Give time for the page to load
-    if LOGIN_URL not in driver.current_url:
-        input("Press Enter to start registration (you're already logged in)...")
-        return
-    input("Please log in manually and press Enter when done...")
-    while LOGIN_URL in driver.current_url:
-        time.sleep(1)
-
-
-def register_for_event(driver: WebDriver, event_url: str) -> None:
-    while True:
-        try:
-            driver.get(event_url)
-            _perform_registration_clicks(driver)
-            print("Successfully registered for the event!")
-            print("Keeping window open. Press Ctrl+C to exit...")
-            break
-        except TimeoutException:
-            print("Registration button not found or not clickable")
-            print("Retrying in 5 seconds...")
-            time.sleep(5)
-        except Exception as e:
-            print(f"An error occurred: {str(e)}")
-            raise
-
-
-def _perform_registration_clicks(driver: WebDriver) -> None:
-    # Click the register button
-    register_button = WebDriverWait(driver, 5).until(
-        EC.element_to_be_clickable(
-            (
-                By.XPATH,
-                "//div[contains(text(), \"S'inscrire\") or contains(text(), 'Register')]",
-            )
+    def __init__(
+        self,
+        local_username: str = "daniel",
+        chrome_user_profile: str = "Default",
+    ) -> None:
+        print(
+            f"Initializing HeyloAutomator with {local_username=} and {chrome_user_profile=}..."
         )
-    )
-    register_button.click()
-    print("Clicked register button")
-
-    # Click the continue button
-    continue_button = WebDriverWait(driver, 5).until(
-        EC.element_to_be_clickable(
-            (
-                By.XPATH,
-                "//div[contains(text(), 'Continue') or contains(text(), 'Continuer')]",
-            )
+        self.login_url = f"{self.BASE_URL}/login"
+        self.events_url = f"{self.BASE_URL}/events/{self.MIDNIGHT_RUNNERS_ID}"
+        self.driver = self._setup_driver(
+            user_data_dir=f"/Users/{local_username}/Library/Application Support/Google/Chrome/",
+            user_profile=chrome_user_profile,
         )
-    )
-    continue_button.click()
-    print("Clicked continue button")
 
-    # Click the skip button
-    skip_button = WebDriverWait(driver, 5).until(
-        EC.element_to_be_clickable(
-            (
-                By.XPATH,
-                "//div[contains(text(), 'Skip') or contains(text(), 'Passer')]",
-            )
+    def _setup_driver(self, user_data_dir: str, user_profile: str) -> WebDriver:
+        """Set up the Chrome WebDriver with user data directory and profile"""
+        print("Setting up Chrome WebDriver...")
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument(f"user-data-dir={user_data_dir}")
+        chrome_options.add_argument(f"profile-directory={user_profile}")
+        return webdriver.Chrome(
+            service=Service(ChromeDriverManager().install()),
+            options=chrome_options,
         )
-    )
-    skip_button.click()
-    print("Clicked skip button")
 
+    def login(self) -> None:
+        """Log into Heylo"""
+        self.driver.get(self.login_url)
+        time.sleep(2)
+        if self.login_url not in self.driver.current_url:
+            print("Already logged in!")
+            return
 
-def find_event(soup: BeautifulSoup, title: str) -> str | None:
-    event_cards = soup.select('[data-testid^="event-card--"]')
-    for card in event_cards:
-        title_elem = card.select_one(".r-8akbws.r-krxsd3")
-        if not title_elem:
-            continue
-        if title in title_elem.text:
-            return card["data-testid"].split("--")[1]
-    return None
+        input("Please log in manually and press Enter when done...")
+        while self.login_url in self.driver.current_url:
+            time.sleep(1)
 
+    def find_event(self, title: str) -> str | None:
+        """Find the event card by its title and return its ID"""
+        print(f"Searching for event: {title}")
+        soup = BeautifulSoup(self.driver.page_source, "html.parser")
 
-def get_event(event_type: str) -> None:
-    driver = setup_driver()
-    driver.get(LOGIN_URL)
-    wait_for_login(driver)
+        upcoming_header = soup.find(
+            "div",
+            string=lambda x: x in ["Upcoming events", "Événements à venir"],
+        )
+        if not upcoming_header:
+            print("Couldn't find upcoming events section")
+            return None
 
-    print("Waiting for event to be published...")
-    while True:
-        try:
-            driver.get(EVENTS_URL)
-            WebDriverWait(driver, 2).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, '[data-testid^="event-card--"]')
+        events_container = upcoming_header.find_parent("div", class_="css-175oi2r")
+        if not events_container:
+            return None
+
+        event_cards = events_container.find_all_next(
+            attrs={"data-testid": lambda x: x and x.startswith("event-card--")}
+        )
+
+        for card in event_cards:
+            title_elem = card.select_one(".r-8akbws.r-krxsd3")
+            if title_elem and title in title_elem.text:
+                print(f"Event found: {title_elem.text}")
+                return card["data-testid"].split("--")[1]
+        return None
+
+    def register_for_event(self, event_url: str) -> None:
+        """Register for the event by clicking the registration button"""
+        print(f"Registering for event: {event_url}")
+        while True:
+            try:
+                self.driver.get(event_url)
+                self._perform_registration_clicks()
+                print("Successfully registered for the event!")
+                break
+            except TimeoutException:
+                print("Registration button not found or not clickable")
+                print("Retrying in 5 seconds...")
+                time.sleep(5)
+            except Exception as e:
+                print(f"An error occurred: {str(e)}")
+                raise
+
+    def _perform_registration_clicks(self) -> None:
+        """Click the registration buttons"""
+        print("Performing registration clicks...")
+        for text_pairs in [
+            ("Register", "S'inscrire"),
+            ("Continue", "Continuer"),
+            ("Skip", "Passer"),
+        ]:
+            button = WebDriverWait(self.driver, 5).until(
+                EC.element_to_be_clickable(
+                    (
+                        By.XPATH,
+                        f"""//div[contains(text(), "{text_pairs[0]}") or contains(text(), "{text_pairs[1]}")]""",
+                    )
                 )
             )
+            button.click()
+            print(f"Clicked '{text_pairs[0]}' button")
 
-            soup = BeautifulSoup(driver.page_source, "html.parser")
-            if event_id := find_event(soup, EVENT_TITLES[event_type]):
-                print("Event found! Attempting to register...")
-                register_for_event(driver, f"{EVENTS_URL}/-{event_id}")
-                input("Registration complete! Press Enter or Ctrl+C to exit...")
-                return
+    def register(self, event_type: str) -> None:
+        """Register for the specified event type"""
+        print(f"Registering for event type: {event_type}")
+        print("Waiting for event to be published...")
+        while True:
+            try:
+                self.driver.get(self.events_url)
+                WebDriverWait(self.driver, 2).until(
+                    EC.presence_of_element_located(
+                        (By.CSS_SELECTOR, '[data-testid^="event-card--"]')
+                    )
+                )
 
-            time.sleep(1)
-            print(".", end="", flush=True)
+                if event_id := self.find_event(self.EVENT_TITLES[event_type]):
+                    print("Event found! Attempting to register...")
+                    self.register_for_event(f"{self.events_url}/-{event_id}")
+                    input("Registration complete! Press Enter or Ctrl+C to exit...")
+                    return
 
-        except Exception as e:
-            print(f"\nAn error occurred: {str(e)}")
-            time.sleep(1)
+                time.sleep(1)
+                print(".", end="", flush=True)
+
+            except Exception as e:
+                print(f"\nAn error occurred: {str(e)}")
+                time.sleep(1)
 
 
-def main():
+def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Heylo event registration automation")
     parser.add_argument(
         "event_type",
-        choices=list(EVENT_TITLES.keys()),
-        help=f"Type of event to register for ({', '.join(EVENT_TITLES.keys())})",
+        choices=list(HeyloAutomator.EVENT_TITLES.keys()),
+        help=f"Type of event to register for ({', '.join(HeyloAutomator.EVENT_TITLES.keys())})",
     )
 
     args = parser.parse_args()
-    get_event(args.event_type)
+
+    automator = HeyloAutomator()
+    automator.login()
+    automator.register(args.event_type)
 
 
 if __name__ == "__main__":
