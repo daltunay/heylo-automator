@@ -12,12 +12,14 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 
 class HeyloAutomator:
-    BASE_URL: str = "https://www.heylo.com"
-    MIDNIGHT_RUNNERS_ID: str = "85c6b042-62cd-47f3-a439-1dd9417f4246"
-    EVENT_TITLES: dict[str, str] = {
+    BASE_URL = "https://www.heylo.com"
+    MIDNIGHT_RUNNERS_ID = "85c6b042-62cd-47f3-a439-1dd9417f4246"
+    EVENT_TITLES = {
         "montmartre": "Thursday - Montmartre Stairs Challenge",
         "bootcamp": "Tuesday Bootcamp Run",
     }
+    EVENT_CONTAINER_CLASS = "css-175oi2r"
+    EVENT_TITLE_CLASS = ".r-8akbws.r-krxsd3"
 
     def __init__(
         self,
@@ -45,10 +47,10 @@ class HeyloAutomator:
             options=chrome_options,
         )
 
-    def login(self) -> None:
+    def login(self, timeout: int = 2) -> None:
         """Log into Heylo"""
         self.driver.get(self.login_url)
-        time.sleep(2)
+        time.sleep(timeout)
         if self.login_url not in self.driver.current_url:
             print("Already logged in!")
             return
@@ -70,7 +72,9 @@ class HeyloAutomator:
             print("Couldn't find upcoming events section")
             return None
 
-        events_container = upcoming_header.find_parent("div", class_="css-175oi2r")
+        events_container = upcoming_header.find_parent(
+            "div", class_=self.EVENT_CONTAINER_CLASS
+        )
         if not events_container:
             return None
 
@@ -79,7 +83,7 @@ class HeyloAutomator:
         )
 
         for card in event_cards:
-            title_elem = card.select_one(".r-8akbws.r-krxsd3")
+            title_elem = card.select_one(self.EVENT_TITLE_CLASS)
             if title_elem and title in title_elem.text:
                 print(f"Event found: {title_elem.text}")
                 return card["data-testid"].split("--")[1]
@@ -155,7 +159,7 @@ def main() -> None:
     parser.add_argument(
         "event_type",
         choices=list(HeyloAutomator.EVENT_TITLES.keys()),
-        help=f"Type of event to register for ({', '.join(HeyloAutomator.EVENT_TITLES.keys())})",
+        help="Type of event to register for",
     )
 
     args = parser.parse_args()
