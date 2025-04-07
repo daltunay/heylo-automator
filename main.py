@@ -14,7 +14,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 # Constants
 BASE_URL = "https://www.heylo.com"
 LOGIN_URL = f"{BASE_URL}/login"
-EVENTS_URL = f"{BASE_URL}/events/85c6b042-62cd-47f3-a439-1dd9417f4246"
+MIDNIGHT_RUNNERS_ID = "85c6b042-62cd-47f3-a439-1dd9417f4246"
+EVENTS_URL = f"{BASE_URL}/events/{MIDNIGHT_RUNNERS_ID}"
 USERNAME = "daniel"
 CHROME_USER_DATA_DIR = f"/Users/{USERNAME}/Library/Application Support/Google/Chrome/"
 CHROME_PROFILE = "Default"
