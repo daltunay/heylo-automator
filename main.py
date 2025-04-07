@@ -23,7 +23,7 @@ class HeyloAutomator:
 
     def __init__(
         self,
-        local_username: str = "daniel",
+        local_username: str,
         chrome_user_profile: str = "Default",
     ) -> None:
         print(
@@ -163,7 +163,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    automator = HeyloAutomator()
+    automator = HeyloAutomator(local_username="daniel")
     automator.login()
     automator.register(args.event_type)
 
